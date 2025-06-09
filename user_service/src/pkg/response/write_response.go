@@ -1,4 +1,4 @@
-package pkg
+package pkgresponse
 
 import (
 	"encoding/json"

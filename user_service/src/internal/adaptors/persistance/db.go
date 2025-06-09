@@ -32,5 +32,14 @@ func ConnectToDatabase() (*Database, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// goose.SetDialect("postgres")
+
+	// err = goose.Up(db, "src/migrations")
+
+	// if err != nil {
+	// 	logger.Log.Fatal(err)
+	// }
+
 	return &Database{db: db}, nil
 }

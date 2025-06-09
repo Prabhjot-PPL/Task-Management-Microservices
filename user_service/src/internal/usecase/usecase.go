@@ -4,7 +4,7 @@ import (
 	"context"
 	"user_service/src/internal/adaptors/ports"
 	"user_service/src/internal/core/dto"
-	"user_service/src/pkg"
+	"user_service/src/pkg/hashing"
 	"user_service/src/pkg/logger"
 )
 
@@ -25,12 +25,10 @@ func (u *UserService) LoginUser(ctx context.Context, userRequestData dto.UserDet
 
 	dbUser, err := u.userRepo.GetUserByEmail(ctx, userRequestData.Email)
 	if err != nil {
-		print("\n")
-		logger.Log.Error(err)
 		return dto.UserDetails{}, err
 	}
 
-	err = pkg.CheckPassword(dbUser.Password, userRequestData.Password)
+	err = hashing.CheckPassword(dbUser.Password, userRequestData.Password)
 	if err != nil {
 		print("\n")
 		logger.Log.Error(err)

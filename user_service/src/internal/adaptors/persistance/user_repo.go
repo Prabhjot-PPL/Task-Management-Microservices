@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"user_service/src/internal/adaptors/ports"
 	"user_service/src/internal/core/dto"
-	"user_service/src/pkg"
+	"user_service/src/pkg/hashing"
 	"user_service/src/pkg/logger"
 
 	"github.com/google/uuid"
@@ -21,7 +21,7 @@ func NewUserRepo(d *Database) ports.UserRepository {
 
 func (u *UserRepo) CreateUser(ctx context.Context, user dto.UserDetails) error {
 
-	hpassword, e := pkg.HashPassword(user.Password)
+	hpassword, e := hashing.HashPassword(user.Password)
 	if e != nil {
 		fmt.Print("\n")
 		logger.Log.Error("Unable to hash password : ", e)

@@ -3,13 +3,15 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 	"user_service/src/internal/adaptors/persistance"
 	"user_service/src/internal/core/dto"
 	pkgmiddleware "user_service/src/internal/interfaces/input/api/rest/middleware"
 	"user_service/src/internal/usecase"
-	"user_service/src/pkg"
+	errorhandling "user_service/src/pkg/error_handling"
+	pkgresponse "user_service/src/pkg/response"
 
 	"github.com/google/uuid"
 )
@@ -31,30 +33,22 @@ func (u *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	// decode request body
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		response := pkg.StandardResponse{
-			Status:  "FAILURE",
-			Message: "failed to register user",
-		}
-		pkg.WriteResponse(w, http.StatusBadRequest, response)
+		errorhandling.HandlerError(w, "failed to register user", http.StatusBadRequest, err)
 		return
 	}
 
 	// register user using request data
 	err = u.userService.RegisterUser(ctx, user)
 	if err != nil {
-		response := pkg.StandardResponse{
-			Status:  "FAILURE",
-			Message: "failed to register user",
-		}
-		pkg.WriteResponse(w, http.StatusBadRequest, response)
+		errorhandling.HandlerError(w, "failed to register user", http.StatusBadRequest, err)
 		return
 	}
 
-	response := pkg.StandardResponse{
+	response := pkgresponse.StandardResponse{
 		Status:  "SUCCESS",
 		Message: "User Registered Successfully ",
 	}
-	pkg.WriteResponse(w, http.StatusOK, response)
+	pkgresponse.WriteResponse(w, http.StatusOK, response)
 }
 
 // LOGIN
@@ -64,23 +58,16 @@ func (u *UserHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// get request body
 	var req dto.UserDetails
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		response := pkg.StandardResponse{
-			Status:  "FAILURE",
-			Message: "failed to login user",
-		}
-		pkg.WriteResponse(w, http.StatusBadRequest, response)
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		errorhandling.HandlerError(w, "failed to login user", http.StatusBadRequest, err)
 		return
 	}
 
 	// verify user credentials
 	loginResp, err := u.userService.LoginUser(ctx, req)
 	if err != nil {
-		response := pkg.StandardResponse{
-			Status:  "FAILURE",
-			Message: "failed to login user",
-		}
-		pkg.WriteResponse(w, http.StatusBadRequest, response)
+		errorhandling.HandlerError(w, "failed to login user", http.StatusBadRequest, err)
 		return
 	}
 
@@ -90,7 +77,7 @@ func (u *UserHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// store session in Redis: key=session:<sessionID>, value=userID, expires in 24h
 	err = persistance.RedisClient.Set(ctx, "session:"+sessionID, loginResp.Id.String(), 24*time.Hour).Err()
 	if err != nil {
-		http.Error(w, "Failed to create session", http.StatusInternalServerError)
+		errorhandling.HandlerError(w, "failed to create session", http.StatusInternalServerError, err)
 		return
 	}
 
@@ -104,12 +91,12 @@ func (u *UserHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	response := pkg.StandardResponse{
+	response := pkgresponse.StandardResponse{
 		Status:  "SUCCESS",
 		Data:    loginResp,
 		Message: "User Logged-in Successfully ",
 	}
-	pkg.WriteResponse(w, http.StatusOK, response)
+	pkgresponse.WriteResponse(w, http.StatusOK, response)
 }
 
 func (u *UserHandler) ProfileHandler(w http.ResponseWriter, r *http.Request) {
@@ -118,25 +105,17 @@ func (u *UserHandler) ProfileHandler(w http.ResponseWriter, r *http.Request) {
 
 	userID, ok := pkgmiddleware.GetUserIDFromContext(r.Context())
 	if !ok {
-		response := pkg.StandardResponse{
-			Status:  "FAILURE",
-			Message: "failed to get user profile",
-		}
-		pkg.WriteResponse(w, http.StatusBadRequest, response)
+		errorhandling.HandlerError(w, "failed to get user profile", http.StatusBadRequest, fmt.Errorf("couldn't get user_id from context"))
 		return
 	}
 
 	userDetails, err := u.userService.GetUserProfile(ctx, userID)
 	if err != nil {
-		response := pkg.StandardResponse{
-			Status:  "FAILURE",
-			Message: "failed to get user profile",
-		}
-		pkg.WriteResponse(w, http.StatusBadRequest, response)
+		errorhandling.HandlerError(w, "failed to get user profile", http.StatusBadRequest, err)
 		return
 	}
 
-	pkg.WriteResponse(w, http.StatusOK, pkg.StandardResponse{
+	pkgresponse.WriteResponse(w, http.StatusOK, pkgresponse.StandardResponse{
 		Status:  "success",
 		Data:    userDetails,
 		Message: "User profile fetched successfully",
@@ -149,39 +128,27 @@ func (u *UserHandler) UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	userId, ok := pkgmiddleware.GetUserIDFromContext(r.Context())
 	if !ok {
-		response := pkg.StandardResponse{
-			Status:  "FAILURE",
-			Message: "failed to get update user",
-		}
-		pkg.WriteResponse(w, http.StatusBadRequest, response)
+		errorhandling.HandlerError(w, "failed to update user profile", http.StatusBadRequest, nil)
 		return
 	}
 
 	var reqData dto.UserDetails
 	err := json.NewDecoder(r.Body).Decode(&reqData)
 	if err != nil {
-		response := pkg.StandardResponse{
-			Status:  "FAILURE",
-			Message: "failed to update user data",
-		}
-		pkg.WriteResponse(w, http.StatusBadRequest, response)
+		errorhandling.HandlerError(w, "failed to update user profile", http.StatusBadRequest, nil)
 		return
 	}
 
 	userInfo, err := u.userService.UpdateUserProfile(ctx, userId, reqData)
 	if err != nil {
-		response := pkg.StandardResponse{
-			Status:  "FAILURE",
-			Message: "failed to update user data",
-		}
-		pkg.WriteResponse(w, http.StatusBadRequest, response)
+		errorhandling.HandlerError(w, "failed to update user data", http.StatusBadRequest, nil)
 		return
 	}
 
-	response := pkg.StandardResponse{
+	response := pkgresponse.StandardResponse{
 		Status:  "SUCCESS",
 		Data:    userInfo,
 		Message: "user profile updated successfully ",
 	}
-	pkg.WriteResponse(w, http.StatusOK, response)
+	pkgresponse.WriteResponse(w, http.StatusOK, response)
 }
