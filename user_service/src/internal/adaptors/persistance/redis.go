@@ -10,4 +10,5 @@ var ctx = context.Background()
 
 var RedisClient = redis.NewClient(&redis.Options{
 	Addr: "localhost:6379",
+	DB:   0,
 })

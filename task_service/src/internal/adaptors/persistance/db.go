@@ -3,8 +3,8 @@ package persistance
 import (
 	"database/sql"
 	"fmt"
-	"user_service/src/internal/config"
-	logger "user_service/src/pkg/logger"
+	"task_service/src/internal/config"
+	logger "task_service/src/pkg/logger"
 
 	_ "github.com/lib/pq"
 )
@@ -32,14 +32,6 @@ func ConnectToDatabase() (*Database, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// goose.SetDialect("postgres")
-
-	// err = goose.Up(db, "src/migrations")
-
-	// if err != nil {
-	// 	logger.Log.Fatal(err)
-	// }
 
 	return &Database{db: db}, nil
 }
